@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Create resources of Network Connection Test.
+  This CloudFormation template automatically creates an S3 bucket to store the network connection test results.
+  The name of the S3 bucket created should be found in the output on the stack.
+  Note that this S3 bucket will remain even after the stack is deleted, so please delete it manually, as it cannot be deleted while the result files are still in the S3 bucket.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Refer CloudFormation Stack Settings
+        Parameters:
+          - ReferenceNetworkStackName
+          - TestTargetSubnetKeys
+      - Label:
+          default: EC2 Settings
+        Parameters:
+          - EC2ImageId
+          - EC2InstanceType
+
+    ParameterLabels:
+
+      ReferenceNetworkStackName:
+        default: ReferenceNetworkStackName
+      TestTargetSubnetKeys:
+        default: TestTargetSubnetKeys
+
+      EC2ImageId:
+        default: ImageId
+      EC2InstanceType:
+        default: InstanceType
+
+Transform: AWS::LanguageExtensions
+
+Parameters:
+
+  ReferenceNetworkStackName:
+    Type: String
+    Description: <Required> Specify the CloudFormation stack name that refers to the Output export value.
+    MinLength: 1
+  TestTargetSubnetKeys:
+    Type: List<String>
+    Description: <Required> Specify the subnet keys created by ReferenceNetworkStackName stack.
+    Default: PublicSubnet1,PrivateSubnet1,PublicSubnet2,PrivateSubnet2,PublicSubnet3,PrivateSubnet3
+    AllowedValues:
+      - PublicSubnet1ForNATGW
+      - PublicSubnet1
+      - PrivateSubnet1
+      - PublicSubnet2ForNATGW
+      - PublicSubnet2
+      - PrivateSubnet2
+      - PublicSubnet3ForNATGW
+      - PublicSubnet3
+      - PrivateSubnet3
+
+  EC2ImageId:
+    Description: <Required> EC2 AMI image id specified by public Parameter Store name. (see https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html)
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-minimal-kernel-default-x86_64
+  EC2InstanceType:
+    Type: String
+    Description: <Required> The instance type. (see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-instance.html#cfn-ec2-instance-instancetype) [Attention] Amazon EC2 supports launching instances based on the Nitro System into IPv6-only subnets. (see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/aws-ipv6-support.html)
+    Default: t3.micro
+    MinLength: 1
+
+Resources:
+
+  EC2NetworkConnectionTestResultS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
+  EC2NetworkConnectionTestResultS3BucketUploadManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: EC2NetworkConnectionTestResultS3BucketUploadManagedPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Sid: AllowUploadFileToEC2NetworkConnectionTestResultS3Bucket
+            Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource: !Sub
+              - ${S3Arn}/*
+              - S3Arn: !GetAtt EC2NetworkConnectionTestResultS3Bucket.Arn
+
+  Fn::ForEach::EC2Instances:
+    - SubnetKey
+    - !Ref TestTargetSubnetKeys
+    - EC2Instance${SubnetKey}:
+        Type: AWS::EC2::Instance
+        DependsOn: EC2NetworkConnectionTestResultS3Bucket
+        Properties:
+          ImageId: !Ref EC2ImageId
+          InstanceType: !Ref EC2InstanceType
+          IamInstanceProfile:
+            Ref: !Sub EC2InstanceProfile${SubnetKey}
+          UserData:
+            Fn::Base64: !Sub
+              - |
+                #!/bin/bash
+                yum update -y
+                dualstack=$(curl -s -m 10 -o /dev/null --write-out "%{http_code}" 'https://www.google.com' 2>&1)
+                if [ "$dualstack" = "200" ]; then
+                    echo -n "OK" > dualstack.txt
+                else
+                    echo -n "" > dualstack.txt
+                fi
+                ipv4Only=$(curl -s -m 10 -o /dev/null --write-out "%{http_code}" 'https://ipv4.google.com' 2>&1)
+                if [ "$ipv4Only" = "200" ]; then
+                    echo -n "OK" > ipv4Only.txt
+                else
+                    echo -n "" > ipv4Only.txt
+                fi
+                ipv6Only=$(curl -s -m 10 -o /dev/null --write-out "%{http_code}" 'https://ipv6.google.com' 2>&1)
+                if [ "$ipv6Only" = "200" ]; then
+                    echo -n "OK" > ipv6Only.txt
+                else
+                    echo -n "" > ipv6Only.txt
+                fi
+                aws configure set default.s3.use_dualstack_endpoint true
+                aws configure set default.s3.addressing_style virtual
+                EnableNatGateway="${EnableNatGateway}"
+                NatGateway="disabledNATGW"
+                if [ "$EnableNatGateway" = "true" ]; then
+                    NatGateway="enabledNATGW"
+                fi
+                S3UrlPrefix=s3://"${EC2NetworkConnectionTestResultS3Bucket}"/"${SubnetKey}"_"${ProtocolStack}"_"$NatGateway"_
+                aws s3 cp dualstack.txt "$S3UrlPrefix"dualstack.txt
+                aws s3 cp ipv4Only.txt "$S3UrlPrefix"ipv4Only.txt
+                aws s3 cp ipv6Only.txt "$S3UrlPrefix"ipv6Only.txt
+              - EnableNatGateway:
+                  Fn::ImportValue: !Sub ${ReferenceNetworkStackName}-EnableNatGateway
+                ProtocolStack:
+                  Fn::ImportValue: !Sub ${ReferenceNetworkStackName}-${SubnetKey}ProtocolStack
+          NetworkInterfaces:
+            - DeviceIndex: 0
+              AssociatePublicIpAddress:
+                Fn::ImportValue: !Sub ${ReferenceNetworkStackName}-${SubnetKey}MapPublicIpOnLaunch
+              SubnetId:
+                Fn::ImportValue: !Sub ${ReferenceNetworkStackName}-${SubnetKey}Id
+              GroupSet:
+                - Ref: !Sub EC2InstanceSecurityGroup${SubnetKey}
+          Tags:
+            - Key: Name
+              Value: !Sub EC2-${SubnetKey}
+
+      EC2InstanceProfile${SubnetKey}:
+        Type: AWS::IAM::InstanceProfile
+        Properties:
+          InstanceProfileName: !Sub EC2InstanceProfile-${SubnetKey}
+          Roles:
+            - Ref: !Sub EC2InstanceRole${SubnetKey}
+
+      EC2InstanceRole${SubnetKey}:
+        Type: AWS::IAM::Role
+        Properties:
+          RoleName: !Sub EC2InstanceRole-${SubnetKey}
+          AssumeRolePolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Principal:
+                  Service:
+                    - ec2.amazonaws.com
+                Action:
+                  - sts:AssumeRole
+          ManagedPolicyArns:
+            - !Ref EC2NetworkConnectionTestResultS3BucketUploadManagedPolicy
+          Tags:
+            - Key: Name
+              Value: !Sub EC2InstanceRole-${SubnetKey}
+
+      EC2InstanceRolePolicy${SubnetKey}:
+        Type: AWS::IAM::Policy
+        Properties:
+          PolicyName: !Sub EC2InstanceRolePolicy-${SubnetKey}
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: '*'
+                Resource: !Sub
+                  - arn:aws:ec2:${AWS::Region}:${AWS::AccountId}:instance:${EC2InstanceId}
+                  - EC2InstanceId:
+                      Ref: !Sub EC2Instance${SubnetKey}
+          Roles:
+            - Ref: !Sub EC2InstanceRole${SubnetKey}
+
+      EC2InstanceSecurityGroup${SubnetKey}:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupName: !Sub EC2-${SubnetKey}-sg
+          GroupDescription: !Sub ${SubnetKey} EC2 instance Security Group.
+          VpcId:
+            Fn::ImportValue: !Sub ${ReferenceNetworkStackName}-VpcId
+          Tags:
+            - Key: Name
+              Value: !Sub EC2-${SubnetKey}-sg
+
+Outputs:
+
+  EC2NetworkConnectionTestResultS3BucketName:
+    Value: !Ref EC2NetworkConnectionTestResultS3Bucket
+    Export:
+      Name: !Sub ${AWS::StackName}-EC2NetworkConnectionTestResultS3BucketName
+
+  EC2NetworkConnectionTestResultS3BucketConsoleUrl:
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/s3/buckets/${EC2NetworkConnectionTestResultS3Bucket}
+    Export:
+      Name: !Sub ${AWS::StackName}-EC2NetworkConnectionTestResultS3BucketConsoleUrl
+

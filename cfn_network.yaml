@@ -1,0 +1,3556 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Create IPv4-Only or Dual Stack(IPv4 & IPv6) or IPv6-Only network resources.
+  We can create network resources easily using AWS Management Console, but cleaning up these resources is always troublesome.
+  NAT Gateway and Elastic IP Address resources are charged just by existing.
+  If you want to use the IPv6 protocol, Egress-Only Internet Gateway is created on VPC.
+  If you use the IPv6 protocol from Private Subnet, you can use the Egress-Only Internet Gateway resource for your Internet connection free of charge.
+  This CloudFormation template lets you easily and instantly create or update or delete these resources, helping you reduce costs and troublesome.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Network Resources Name Prefix
+        Parameters:
+          - ResourcePrefix
+      - Label:
+          default: <Charged> Enable NAT Gateway and Elastic IP
+        Parameters:
+          - EnableNatGateway
+      - Label:
+          default: Enable IPv6
+        Parameters:
+          - EnableIpv6CidrBlock
+      - Label:
+          default: VPC Settings
+        Parameters:
+          - VpcName
+          - VpcCidrBlockIpAddressPrefix
+          - VpcCidrBlockIpAddressSuffix
+          - VpcCidrBlockCidr
+      - Label:
+          default: Subnet 1 Settings
+        Parameters:
+          - CreateSubnet1
+          - Subnet1AvailabilityZone
+      - Label:
+          default: Subnet 2 Settings
+        Parameters:
+          - CreateSubnet2
+          - Subnet2AvailabilityZone
+      - Label:
+          default: Subnet 3 Settings
+        Parameters:
+          - CreateSubnet3
+          - Subnet3AvailabilityZone
+      - Label:
+          default: Gateway Type VPC Endpoint Settings
+        Parameters:
+          - CreateS3VpcEndpoint
+          - CreateDynamoDBVpcEndpoint
+      - Label:
+          default: PrefixList Settings
+        Parameters:
+          - CreatePrefixList
+      - Label:
+          default: Public Subnet 1 For NAT Gateway Settings
+        Parameters:
+          - PublicSubnet1ForNATGWName
+          - PublicSubnet1ForNATGWCidrBlockIpAddressSuffix
+          - PublicSubnet1ForNATGWCidrBlockCidr
+      - Label:
+          default: Public Subnet 1 Settings
+        Parameters:
+          - PublicSubnet1Name
+          - PublicSubnet1CidrBlockIpAddressSuffix
+          - PublicSubnet1CidrBlockCidr
+          - PublicSubnet1InternetProtocolStack
+      - Label:
+          default: Private Subnet 1 Settings
+        Parameters:
+          - PrivateSubnet1Name
+          - PrivateSubnet1CidrBlockIpAddressSuffix
+          - PrivateSubnet1CidrBlockCidr
+          - PrivateSubnet1InternetProtocolStack
+      - Label:
+          default: Public Subnet 2 For NAT Gateway Settings
+        Parameters:
+          - PublicSubnet2ForNATGWName
+          - PublicSubnet2ForNATGWCidrBlockIpAddressSuffix
+          - PublicSubnet2ForNATGWCidrBlockCidr
+      - Label:
+          default: Public Subnet 2 Settings
+        Parameters:
+          - PublicSubnet2Name
+          - PublicSubnet2CidrBlockIpAddressSuffix
+          - PublicSubnet2CidrBlockCidr
+          - PublicSubnet2InternetProtocolStack
+      - Label:
+          default: Private Subnet 2 Settings
+        Parameters:
+          - PrivateSubnet2Name
+          - PrivateSubnet2CidrBlockIpAddressSuffix
+          - PrivateSubnet2CidrBlockCidr
+          - PrivateSubnet2InternetProtocolStack
+      - Label:
+          default: Public Subnet 3 For NAT Gateway Settings
+        Parameters:
+          - PublicSubnet3ForNATGWName
+          - PublicSubnet3ForNATGWCidrBlockIpAddressSuffix
+          - PublicSubnet3ForNATGWCidrBlockCidr
+      - Label:
+          default: Public Subnet 3 Settings
+        Parameters:
+          - PublicSubnet3Name
+          - PublicSubnet3CidrBlockIpAddressSuffix
+          - PublicSubnet3CidrBlockCidr
+          - PublicSubnet3InternetProtocolStack
+      - Label:
+          default: Private Subnet 3 Settings
+        Parameters:
+          - PrivateSubnet3Name
+          - PrivateSubnet3CidrBlockIpAddressSuffix
+          - PrivateSubnet3CidrBlockCidr
+          - PrivateSubnet3InternetProtocolStack
+
+    ParameterLabels:
+
+      ResourcePrefix:
+        default: prefix
+
+      EnableNatGateway:
+        default: enabled
+
+      EnableIpv6CidrBlock:
+        default: enabled
+
+      VpcName:
+        default: name
+      VpcCidrBlockIpAddressPrefix:
+        default: IPAddressPrefix
+      VpcCidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      VpcCidrBlockCidr:
+        default: CIDR
+
+      CreateSubnet1:
+        default: Create
+      Subnet1AvailabilityZone:
+        default: AvailabilityZone
+
+      CreateSubnet2:
+        default: Create
+      Subnet2AvailabilityZone:
+        default: AvailabilityZone
+
+      CreateSubnet3:
+        default: Create
+      Subnet3AvailabilityZone:
+        default: AvailabilityZone
+
+      CreateS3VpcEndpoint:
+        default: CreateS3
+      CreateDynamoDBVpcEndpoint:
+        default: CreateDynamoDB
+
+      CreatePrefixList:
+        default: Create
+
+      PublicSubnet1ForNATGWName:
+        default: name
+      PublicSubnet1ForNATGWCidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet1ForNATGWCidrBlockCidr:
+        default: CIDR
+
+      PublicSubnet1Name:
+        default: name
+      PublicSubnet1CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet1CidrBlockCidr:
+        default: CIDR
+      PublicSubnet1InternetProtocolStack:
+        default: InternetProtocolStack
+
+      PrivateSubnet1Name:
+        default: name
+      PrivateSubnet1CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PrivateSubnet1CidrBlockCidr:
+        default: CIDR
+      PrivateSubnet1InternetProtocolStack:
+        default: InternetProtocolStack
+
+      PublicSubnet2ForNATGWName:
+        default: name
+      PublicSubnet2ForNATGWCidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet2ForNATGWCidrBlockCidr:
+        default: CIDR
+
+      PublicSubnet2Name:
+        default: name
+      PublicSubnet2CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet2CidrBlockCidr:
+        default: CIDR
+      PublicSubnet2InternetProtocolStack:
+        default: InternetProtocolStack
+
+      PrivateSubnet2Name:
+        default: name
+      PrivateSubnet2CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PrivateSubnet2CidrBlockCidr:
+        default: CIDR
+      PrivateSubnet2InternetProtocolStack:
+        default: InternetProtocolStack
+
+      PublicSubnet3ForNATGWName:
+        default: name
+      PublicSubnet3ForNATGWCidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet3ForNATGWCidrBlockCidr:
+        default: CIDR
+
+      PublicSubnet3Name:
+        default: name
+      PublicSubnet3CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PublicSubnet3CidrBlockCidr:
+        default: CIDR
+      PublicSubnet3InternetProtocolStack:
+        default: InternetProtocolStack
+
+      PrivateSubnet3Name:
+        default: name
+      PrivateSubnet3CidrBlockIpAddressSuffix:
+        default: IPAddressSuffix
+      PrivateSubnet3CidrBlockCidr:
+        default: CIDR
+      PrivateSubnet3InternetProtocolStack:
+        default: InternetProtocolStack
+
+Parameters:
+
+  ResourcePrefix:
+    Description: <Required> This value is used as the resource name prefix.
+    Type: String
+    MinLength: 1
+
+  EnableNatGateway:
+    Description: <Charged> Create NAT Gateway and Elastic IP. Note that NAT Gateways and Elastic IPs are created per availability zone and are charged separately. These resources are required for IPv4 local to IPv4 public address translation for Internet connectivity from private subnets and IPv6 to IPv4 address translation (NAT64) for connecting from an IPv6-Only subnet to an IPv4-Only environment In the case of IPv6-Only, it is required for IPv4-Only. For IPv6-Only, creating the NAT gateway and Elastic IP will automatically enable DNS64 for the subnet and prepare the NAT gateway routing for NAT64. If not IPv6-Only, creating a NAT gateway and Elastic IP automatically prepares the NAT gateway routing for Internet connectivity from the private subnet.
+    Type: String
+    Default: false
+    AllowedValues: [ true, false ]
+
+  EnableIpv6CidrBlock:
+    Description: <Cannot update after create stack> Whether IPv6 is enabled or not should be decided and specified when the CloudFormation stack is created. It cannot be changed after creation. Requests an Amazon-provided IPv6 CIDR block with a /56 prefix length for the VPC. You cannot specify the range of IPv6 addresses or the size of the CIDR block. If specified this 'false', (Public or Private) Subnet internet protocol stack 'DualStack' setting regard as 'IPv4Only'. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/aws-ipv6-support.html
+    Type: String
+    Default: true
+    AllowedValues: [ true, false ]
+
+  VpcName:
+    Description: <Optional> VPC resource name.
+    Type: String
+  VpcCidrBlockIpAddressPrefix:
+    Description: <Required> VPC primary CIDR block IP address prefix conforming to RFC 1918 and AWS user guide. This IP address prefix is automatically applied to the subnet IP address prefix. For example (10.X.X.X, 172.16.X.X, 172.18.X.X - 172.31.X.X, 192.168.X.X). 10.0.0.0 - 10.255.255.255 (10/8 prefix), 172.16.0.0 - 172.16.255.255, 172.18.0.0 - 172.31.255.255 (172.16/12 prefix), 192.168.0.0 - 192.168.255.255 (192.168/16 prefix). see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/vpc-cidr-blocks.html, and see http://www.faqs.org/rfcs/rfc1918.html
+    Type: String
+    Default: 10.0
+    AllowedPattern: "^(10\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])|172\\.(16|1[8-9]|2[0-9]|3[0-1])|192\\.168)$"
+    ConstraintDescription: xxx.xxx
+  VpcCidrBlockIpAddressSuffix:
+    Description: <Required> VPC primary CIDR block IP address suffix.
+    Type: String
+    Default: 0.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  VpcCidrBlockCidr:
+    Description: <Required> VPC primary CIDR block CIDR (16 - 28). /28 - 16 IP Addresses, /27 - 32 IPs, /26 - 64 IPs, /25 - 128 IPs, /24 - 256 IPs, /23 - 512 IPs, /22 - 1024 IPs, /21 - 2048 IPs, /20 - 4096 IPs, /19 - 8192 IPs, /18 - 16384 IPs, /17 - 32768 IPs, /16 - 65536 IPs.
+    Type: String
+    Default: 16
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+
+  CreateSubnet1:
+    Description: Create (Public and Private) Subnet 1 or not.
+    Type: String
+    Default: true
+    AllowedValues: [ true, false ]
+  Subnet1AvailabilityZone:
+    Description: (Public and Private) Subnet 1 availability zone name.
+    Type: AWS::EC2::AvailabilityZone::Name
+    MinLength: 1
+    Default: ap-northeast-1a
+
+  CreateSubnet2:
+    Description: Create (Public and Private) Subnet 2 or not.
+    Type: String
+    Default: false
+    AllowedValues: [ true, false ]
+  Subnet2AvailabilityZone:
+    Description: (Public and Private) Subnet 2 availability zone name.
+    Type: AWS::EC2::AvailabilityZone::Name
+    MinLength: 1
+    Default: ap-northeast-1c
+
+  CreateSubnet3:
+    Description: Create (Public and Private) Subnet 3 or not.
+    Type: String
+    Default: false
+    AllowedValues: [ true, false ]
+  Subnet3AvailabilityZone:
+    Description: (Public and Private) Subnet 3 availability zone name.
+    Type: AWS::EC2::AvailabilityZone::Name
+    MinLength: 1
+    Default: ap-northeast-1d
+
+  CreateS3VpcEndpoint:
+    Description: Create gateway type S3 VPC Endpoint or not.
+    Type: String
+    Default: true
+    AllowedValues: [ true, false ]
+  CreateDynamoDBVpcEndpoint:
+    Description: Create gateway type dynamoDB VPC Endpoint or not.
+    Type: String
+    Default: false
+    AllowedValues: [ true, false ]
+
+  CreatePrefixList:
+    Description: Create PrefixList or not.
+    Type: String
+    Default: true
+    AllowedValues: [ true, false ]
+
+  PublicSubnet1ForNATGWName:
+    Description: <Optional> Public Subnet 1 for NAT Gateway resource name.
+    Type: String
+  PublicSubnet1ForNATGWCidrBlockIpAddressSuffix:
+    Description: Public Subnet 1 for NAT Gateway CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 0.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet1ForNATGWCidrBlockCidr:
+    Description: Public Subnet 1 for NAT Gateway CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+
+  PublicSubnet1Name:
+    Description: <Optional> Public Subnet 1 resource name.
+    Type: String
+  PublicSubnet1CidrBlockIpAddressSuffix:
+    Description: Public Subnet 1 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 48.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet1CidrBlockCidr:
+    Description: Public Subnet 1 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PublicSubnet1InternetProtocolStack:
+    Description: Public Subnet 1 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that the decision to set the protocol stack to IPv6Only be made at the time of subnet creation and not changed after creation. Also, since a NAT Gateway cannot be created on an IPv6Only subnet, the protocol stack should be set to DualStack instead of IPv6Only on the subnet where the NAT Gateway is planned to be created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+  PrivateSubnet1Name:
+    Description: <Optional> Private Subnet 1 resource name.
+    Type: String
+  PrivateSubnet1CidrBlockIpAddressSuffix:
+    Description: Private Subnet 1 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 96.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PrivateSubnet1CidrBlockCidr:
+    Description: Private Subnet 1 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PrivateSubnet1InternetProtocolStack:
+    Description: Private Subnet 1 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that you decide whether or not to set the protocol stack to IPv6Only when you create the subnet, and that you do not change it once it is created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+  PublicSubnet2ForNATGWName:
+    Description: <Optional> Public Subnet 2 for NAT Gateway resource name.
+    Type: String
+  PublicSubnet2ForNATGWCidrBlockIpAddressSuffix:
+    Description: Public Subnet 2 for NAT Gateway CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 16.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet2ForNATGWCidrBlockCidr:
+    Description: Public Subnet 2 for NAT Gateway CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+
+  PublicSubnet2Name:
+    Description: <Optional> Public Subnet 2 resource name.
+    Type: String
+  PublicSubnet2CidrBlockIpAddressSuffix:
+    Description: Public Subnet 2 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 64.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet2CidrBlockCidr:
+    Description: Public Subnet 2 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PublicSubnet2InternetProtocolStack:
+    Description: Public Subnet 2 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that the decision to set the protocol stack to IPv6Only be made at the time of subnet creation and not changed after creation. Also, since a NAT Gateway cannot be created on an IPv6Only subnet, the protocol stack should be set to DualStack instead of IPv6Only on the subnet where the NAT Gateway is planned to be created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+  PrivateSubnet2Name:
+    Description: <Optional> Private Subnet 2 resource name.
+    Type: String
+  PrivateSubnet2CidrBlockIpAddressSuffix:
+    Description: Private Subnet 2 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 112.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PrivateSubnet2CidrBlockCidr:
+    Description: Private Subnet 2 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PrivateSubnet2InternetProtocolStack:
+    Description: Private Subnet 2 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that you decide whether or not to set the protocol stack to IPv6Only when you create the subnet, and that you do not change it once it is created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+  PublicSubnet3ForNATGWName:
+    Description: <Optional> Public Subnet 3 for NAT Gateway resource name.
+    Type: String
+  PublicSubnet3ForNATGWCidrBlockIpAddressSuffix:
+    Description: Public Subnet 3 for NAT Gateway CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 32.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet3ForNATGWCidrBlockCidr:
+    Description: Public Subnet 3 for NAT Gateway CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+
+  PublicSubnet3Name:
+    Description: <Optional> Public Subnet 3 resource name.
+    Type: String
+  PublicSubnet3CidrBlockIpAddressSuffix:
+    Description: Public Subnet 3 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 80.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PublicSubnet3CidrBlockCidr:
+    Description: Public Subnet 3 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PublicSubnet3InternetProtocolStack:
+    Description: Public Subnet 3 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that the decision to set the protocol stack to IPv6Only be made at the time of subnet creation and not changed after creation. Also, since a NAT Gateway cannot be created on an IPv6Only subnet, the protocol stack should be set to DualStack instead of IPv6Only on the subnet where the NAT Gateway is planned to be created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+  PrivateSubnet3Name:
+    Description: <Optional> Private Subnet 3 resource name.
+    Type: String
+  PrivateSubnet3CidrBlockIpAddressSuffix:
+    Description: Private Subnet 3 CIDR block IP address suffix. see https://docs.aws.amazon.com/ja_jp/vpc/latest/userguide/subnet-sizing.html
+    Type: String
+    Default: 128.0
+    AllowedPattern: "^([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$"
+    ConstraintDescription: xxx.xxx
+  PrivateSubnet3CidrBlockCidr:
+    Description: Private Subnet 3 CIDR block CIDR (16 - 28).
+    Type: String
+    Default: 20
+    AllowedPattern: "^(1[6-9]|2[0-8])$"
+    ConstraintDescription: xx
+  PrivateSubnet3InternetProtocolStack:
+    Description: Private Subnet 3 Internet Protocol Stack. If IPv6 is not enabled, it is forced to consider IPv4Only. It is strongly recommended that you decide whether or not to set the protocol stack to IPv6Only when you create the subnet, and that you do not change it once it is created. It can be changed, but this has the side effect of recreating the subnet. If you do change it, please make sure that the side-effect is not a problem before doing so.
+    Type: String
+    Default: DualStack
+    AllowedValues: [ IPv4Only, DualStack, IPv6Only ]
+
+Conditions:
+
+  NotSpecifiedVpcName: !Equals [ !Ref VpcName, "" ]
+  EnableIpv6CidrBlock: !Equals [ !Ref EnableIpv6CidrBlock, true ]
+  CreatePrefixList: !Equals [ !Ref CreatePrefixList, true ]
+  EnableNatGateway: !Equals [ !Ref EnableNatGateway, true ]
+
+  CreateSubnet1: !Equals [ !Ref CreateSubnet1, true ]
+  EnableNatGateway1:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Condition EnableNatGateway
+  EnableIpv6CidrBlock1:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Condition EnableIpv6CidrBlock
+  NotSpecifiedPublicSubnet1ForNATGWName: !Equals [ !Ref PublicSubnet1ForNATGWName, "" ]
+  PublicSubnet1Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PublicSubnet1InternetProtocolStack, IPv6Only ]
+  NotPublicSubnet1Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Not [ !Condition PublicSubnet1Ipv6Only ]
+  PublicSubnet1Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PublicSubnet1InternetProtocolStack, IPv4Only ]
+  NotPublicSubnet1Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Not [ !Condition PublicSubnet1Ipv4Only ]
+  EnablePublicSubnet1NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway1
+      - !Condition PublicSubnet1Ipv6Only
+  NotSpecifiedPublicSubnet1Name: !Equals [ !Ref PublicSubnet1Name, "" ]
+
+  PrivateSubnet1Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PrivateSubnet1InternetProtocolStack, IPv6Only ]
+  NotPrivateSubnet1Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Not [ !Condition PrivateSubnet1Ipv6Only ]
+  EnablePrivateNatGateway1:
+    Fn::And:
+      - !Condition EnableNatGateway1
+      - !Condition NotPrivateSubnet1Ipv6Only
+  PrivateSubnet1Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PrivateSubnet1InternetProtocolStack, IPv4Only ]
+  NotPrivateSubnet1Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet1
+      - !Not [ !Condition PrivateSubnet1Ipv4Only ]
+  EnablePrivateSubnet1NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway1
+      - !Condition PrivateSubnet1Ipv6Only
+  NotSpecifiedPrivateSubnet1Name: !Equals [ !Ref PrivateSubnet1Name, "" ]
+
+  CreateSubnet2: !Equals [ !Ref CreateSubnet2, true ]
+  EnableNatGateway2:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Condition EnableNatGateway
+  EnableIpv6CidrBlock2:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Condition EnableIpv6CidrBlock
+  NotSpecifiedPublicSubnet2ForNATGWName: !Equals [ !Ref PublicSubnet2ForNATGWName, "" ]
+  PublicSubnet2Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PublicSubnet2InternetProtocolStack, IPv6Only ]
+  NotPublicSubnet2Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Not [ !Condition PublicSubnet2Ipv6Only ]
+  PublicSubnet2Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PublicSubnet2InternetProtocolStack, IPv4Only ]
+  NotPublicSubnet2Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Not [ !Condition PublicSubnet2Ipv4Only ]
+  EnablePublicSubnet2NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway2
+      - !Condition PublicSubnet2Ipv6Only
+  NotSpecifiedPublicSubnet2Name: !Equals [ !Ref PublicSubnet2Name, "" ]
+
+  PrivateSubnet2Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PrivateSubnet2InternetProtocolStack, IPv6Only ]
+  NotPrivateSubnet2Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Not [ !Condition PrivateSubnet2Ipv6Only ]
+  EnablePrivateNatGateway2:
+    Fn::And:
+      - !Condition EnableNatGateway2
+      - !Condition NotPrivateSubnet2Ipv6Only
+  PrivateSubnet2Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PrivateSubnet2InternetProtocolStack, IPv4Only ]
+  NotPrivateSubnet2Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet2
+      - !Not [ !Condition PrivateSubnet2Ipv4Only ]
+  EnablePrivateSubnet2NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway2
+      - !Condition PrivateSubnet2Ipv6Only
+  NotSpecifiedPrivateSubnet2Name: !Equals [ !Ref PrivateSubnet2Name, "" ]
+
+  CreateSubnet3: !Equals [ !Ref CreateSubnet3, true ]
+  EnableNatGateway3:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Condition EnableNatGateway
+  EnableIpv6CidrBlock3:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Condition EnableIpv6CidrBlock
+  NotSpecifiedPublicSubnet3ForNATGWName: !Equals [ !Ref PublicSubnet3ForNATGWName, "" ]
+  PublicSubnet3Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PublicSubnet3InternetProtocolStack, IPv6Only ]
+  NotPublicSubnet3Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Not [ !Condition PublicSubnet3Ipv6Only ]
+  PublicSubnet3Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PublicSubnet3InternetProtocolStack, IPv4Only ]
+  NotPublicSubnet3Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Not [ !Condition PublicSubnet3Ipv4Only ]
+  EnablePublicSubnet3NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway3
+      - !Condition PublicSubnet3Ipv6Only
+  NotSpecifiedPublicSubnet3Name: !Equals [ !Ref PublicSubnet3Name, "" ]
+
+  PrivateSubnet3Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Condition EnableIpv6CidrBlock
+      - !Equals [ !Ref PrivateSubnet3InternetProtocolStack, IPv6Only ]
+  NotPrivateSubnet3Ipv6Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Not [ !Condition PrivateSubnet3Ipv6Only ]
+  EnablePrivateNatGateway3:
+    Fn::And:
+      - !Condition EnableNatGateway3
+      - !Condition NotPrivateSubnet3Ipv6Only
+  PrivateSubnet3Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - Fn::Or:
+          - !Not [ !Condition EnableIpv6CidrBlock ]
+          - !Equals [ !Ref PrivateSubnet3InternetProtocolStack, IPv4Only ]
+  NotPrivateSubnet3Ipv4Only:
+    Fn::And:
+      - !Condition CreateSubnet3
+      - !Not [ !Condition PrivateSubnet3Ipv4Only ]
+  EnablePrivateSubnet3NAT64:
+    Fn::And:
+      - !Condition EnableNatGateway3
+      - !Condition PrivateSubnet3Ipv6Only
+  NotSpecifiedPrivateSubnet3Name: !Equals [ !Ref PrivateSubnet3Name, "" ]
+
+  CreateSubnet:
+    Fn::Or:
+      - !Condition CreateSubnet1
+      - !Condition CreateSubnet2
+      - !Condition CreateSubnet3
+
+  CreateS3VpcEndpoint:
+    Fn::And:
+      - !Equals [ !Ref CreateS3VpcEndpoint, true ]
+      - !Condition CreateSubnet
+  CreateDynamoDBVpcEndpoint:
+    Fn::And:
+      - !Equals [ !Ref CreateDynamoDBVpcEndpoint, true ]
+      - !Condition CreateSubnet
+
+Resources:
+
+##############################
+# VPC
+##############################
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Sub ${VpcCidrBlockIpAddressPrefix}.${VpcCidrBlockIpAddressSuffix}/${VpcCidrBlockCidr}
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedVpcName
+              - !Sub ${ResourcePrefix}-vpc
+              - !Ref VpcName
+
+  VPCIpv6CidrBlock:
+    Type: AWS::EC2::VPCCidrBlock
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      AmazonProvidedIpv6CidrBlock: true
+      VpcId: !Ref VPC
+
+  NoWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+# AWS::CloudFormation::WaitConditionHandle Updates aren't supported for this resource. see https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-waitconditionhandle.html
+  VPCIpv6CidrBlockWaitHandle:
+    Condition: EnableIpv6CidrBlock
+    DependsOn: VPCIpv6CidrBlock
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+# AWS::CloudFormation::WaitCondition Updates aren't supported. see https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-resource-cloudformation-waitcondition.html
+  EnableIpv6CidrBlockWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !If [ EnableIpv6CidrBlock, !Ref VPCIpv6CidrBlockWaitHandle, !Ref NoWaitHandle ]
+      Timeout: 1
+      Count: 0
+
+  VPCIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        -  Cidr: !GetAtt VPC.CidrBlock
+           Description: !Sub ${ResourcePrefix} VPC Primary IPv4 CIDR block.
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-vpc-ipv4-cidr-pl
+      Tags: 
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-vpc-ipv4-cidr-pl
+
+  VPCIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        -  Fn::If:
+             - EnableIpv6CidrBlock
+             - Cidr: !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ]
+               Description: !Sub ${ResourcePrefix} VPC IPv6 CIDR block.
+             - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-vpc-ipv6-cidr-pl
+      Tags: 
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-vpc-ipv6-cidr-pl
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-igw
+
+  VPCInternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  EgressOnlyInternetGateway:
+    Type: AWS::EC2::EgressOnlyInternetGateway
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      VpcId: !Ref VPC
+
+##############################
+# Public NAT Gateway Network
+##############################
+
+  PublicForNATGWNetworkACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-for-natgw-nacl
+
+  PublicForNATGWNetworkACLEntryEgress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+      Egress: true
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PublicForNATGWNetworkACLEntryIngress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+      Egress: false
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PublicForNATGWNetworkACLEntryEgressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+      Egress: true
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  PublicForNATGWNetworkACLEntryIngressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+      Egress: false
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  NatGatewayEipPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - EnableNatGateway1
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip1.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 1 Public IP.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - EnableNatGateway2
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip2.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 2 Public IP.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - EnableNatGateway3
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip3.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 3 Public IP.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-natgw-eip-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip-pl
+
+  PublicSubnetForNATGWIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Cidr: !GetAtt PublicSubnet1ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 1 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - Cidr: !GetAtt PublicSubnet2ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 2 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - Cidr: !GetAtt PublicSubnet3ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 3 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet-for-natgw-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet-for-natgw-ipv4-cidr-pl
+
+  PublicSubnetForNATGWIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - EnableIpv6CidrBlock1
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet1ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 1 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - EnableIpv6CidrBlock2
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet2ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 2 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - EnableIpv6CidrBlock3
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet3ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 3 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet-for-natgw-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet-for-natgw-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 1 For NAT Gateway
+#---------------------------------------
+
+  NatGatewayEip1:
+    Type: AWS::EC2::EIP
+    Condition: EnableNatGateway1
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip1-${Subnet1AvailabilityZone}
+
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Condition: EnableNatGateway1
+    Properties:
+      AllocationId: !GetAtt NatGatewayEip1.AllocationId
+      ConnectivityType: public
+      SubnetId: !Ref PublicSubnet1ForNATGW
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw1-${Subnet1AvailabilityZone}
+
+  PublicRouteTable1ForNATGW:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet1
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb1-for-natgw-${Subnet1AvailabilityZone}
+
+  InternetAccessPublicRoute1ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: CreateSubnet1
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1ForNATGW
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute1IPv6ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: EnableIpv6CidrBlock1
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1ForNATGW
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1ForNATGW:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet1
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet1AvailabilityZone
+      MapPublicIpOnLaunch: true
+      AssignIpv6AddressOnCreation: !If [ EnableIpv6CidrBlock1, true, false ]
+      CidrBlock: !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet1ForNATGWCidrBlockIpAddressSuffix}/${PublicSubnet1ForNATGWCidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - EnableIpv6CidrBlock1
+          - !Select [ 0, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+          - !Ref AWS::NoValue
+      Ipv6Native: false
+      EnableDns64: false
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet1ForNATGWName
+              - !Sub ${ResourcePrefix}-public-subnet1-for-natgw-${Subnet1AvailabilityZone}
+              - !Ref PublicSubnet1ForNATGWName
+
+  PublicSubnet1ForNATGWRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PublicSubnet1ForNATGW
+      RouteTableId: !Ref PublicRouteTable1ForNATGW
+
+  PublicSubnet1ForNATGWNACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PublicSubnet1ForNATGW
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+
+  NatGatewayEip1PrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - EnableNatGateway1
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip1.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 1 Public IP.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-natgw-eip1-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip1-pl
+
+  PublicSubnet1ForNATGWIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Cidr: !GetAtt PublicSubnet1ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 1 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet1-for-natgw-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet1-for-natgw-ipv4-cidr-pl
+
+  PublicSubnet1ForNATGWIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - EnableIpv6CidrBlock1
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet1ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 1 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet1-for-natgw-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet1-for-natgw-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 2 For NAT Gateway
+#---------------------------------------
+
+  NatGatewayEip2:
+    Type: AWS::EC2::EIP
+    Condition: EnableNatGateway2
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip2-${Subnet2AvailabilityZone}
+
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Condition: EnableNatGateway2
+    Properties:
+      AllocationId: !GetAtt NatGatewayEip2.AllocationId
+      ConnectivityType: public
+      SubnetId: !Ref PublicSubnet2ForNATGW
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw2-${Subnet2AvailabilityZone}
+
+  PublicRouteTable2ForNATGW:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet2
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb2-for-natgw-${Subnet2AvailabilityZone}
+
+  InternetAccessPublicRoute2ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: CreateSubnet2
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2ForNATGW
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute2IPv6ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: EnableIpv6CidrBlock2
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2ForNATGW
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet2ForNATGW:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet2
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet2AvailabilityZone
+      MapPublicIpOnLaunch: true
+      AssignIpv6AddressOnCreation: !If [ EnableIpv6CidrBlock2, true, false ]
+      CidrBlock: !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet2ForNATGWCidrBlockIpAddressSuffix}/${PublicSubnet2ForNATGWCidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - EnableIpv6CidrBlock2
+          - !Select [ 1, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+          - !Ref AWS::NoValue
+      Ipv6Native: false
+      EnableDns64: false
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet2ForNATGWName
+              - !Sub ${ResourcePrefix}-public-subnet2-for-natgw-${Subnet2AvailabilityZone}
+              - !Ref PublicSubnet2ForNATGWName
+
+  PublicSubnet2ForNATGWRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PublicSubnet2ForNATGW
+      RouteTableId: !Ref PublicRouteTable2ForNATGW
+
+  PublicSubnet2ForNATGWNACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PublicSubnet2ForNATGW
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+
+  NatGatewayEip2PrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - EnableNatGateway2
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip2.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 2 Public IP.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-natgw-eip2-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip2-pl
+
+  PublicSubnet2ForNATGWIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet2
+          - Cidr: !GetAtt PublicSubnet2ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 2 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet2-for-natgw-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet2-for-natgw-ipv4-cidr-pl
+
+  PublicSubnet2ForNATGWIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - EnableIpv6CidrBlock2
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet2ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 2 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet2-for-natgw-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet2-for-natgw-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 3 For NAT Gateway
+#---------------------------------------
+
+  NatGatewayEip3:
+    Type: AWS::EC2::EIP
+    Condition: EnableNatGateway3
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip3-${Subnet3AvailabilityZone}
+
+  NatGateway3:
+    Type: AWS::EC2::NatGateway
+    Condition: EnableNatGateway3
+    Properties:
+      AllocationId: !GetAtt NatGatewayEip3.AllocationId
+      ConnectivityType: public
+      SubnetId: !Ref PublicSubnet3ForNATGW
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw3-${Subnet3AvailabilityZone}
+
+  PublicRouteTable3ForNATGW:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb3-for-natgw-${Subnet3AvailabilityZone}
+
+  InternetAccessPublicRoute3ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: CreateSubnet3
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3ForNATGW
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute3IPv6ForNATGW:
+    Type: AWS::EC2::Route
+    Condition: EnableIpv6CidrBlock3
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3ForNATGW
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet3ForNATGW:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet3
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet3AvailabilityZone
+      MapPublicIpOnLaunch: true
+      AssignIpv6AddressOnCreation: !If [ EnableIpv6CidrBlock3, true, false ]
+      CidrBlock: !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet3ForNATGWCidrBlockIpAddressSuffix}/${PublicSubnet3ForNATGWCidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - EnableIpv6CidrBlock3
+          - !Select [ 2, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+          - !Ref AWS::NoValue
+      Ipv6Native: false
+      EnableDns64: false
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet3ForNATGWName
+              - !Sub ${ResourcePrefix}-public-subnet3-for-natgw-${Subnet3AvailabilityZone}
+              - !Ref PublicSubnet3ForNATGWName
+
+  PublicSubnet3ForNATGWRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PublicSubnet3ForNATGW
+      RouteTableId: !Ref PublicRouteTable3ForNATGW
+
+  PublicSubnet3ForNATGWNACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PublicSubnet3ForNATGW
+      NetworkAclId: !Ref PublicForNATGWNetworkACL
+
+  NatGatewayEip3PrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - EnableNatGateway3
+          - Cidr: !Join [ '', [ !GetAtt NatGatewayEip3.PublicIp, /32 ] ]
+            Description: !Sub ${ResourcePrefix} Nat Gateway 3 Public IP.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-natgw-eip3-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-natgw-eip3-pl
+
+  PublicSubnet3ForNATGWIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet3
+          - Cidr: !GetAtt PublicSubnet3ForNATGW.CidrBlock
+            Description: !Sub ${ResourcePrefix} Public Subnet 3 For NAT Gateway IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet3-for-natgw-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet3-for-natgw-ipv4-cidr-pl
+
+  PublicSubnet3ForNATGWIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - EnableIpv6CidrBlock3
+          - Cidr: !Select [ 0, !GetAtt PublicSubnet3ForNATGW.Ipv6CidrBlocks ]
+            Description: !Sub ${ResourcePrefix} Public Subnet 3 For NAT Gateway IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet3-for-natgw-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet3-for-natgw-ipv6-cidr-pl
+
+##############################
+# Public Network
+##############################
+
+  PublicNetworkACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-nacl
+
+  PublicNetworkACLEntryEgress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      Egress: true
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PublicNetworkACLEntryIngress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      Egress: false
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PublicNetworkACLEntryEgressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      Egress: true
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  PublicNetworkACLEntryIngressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PublicNetworkACL
+      Egress: false
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  PublicSubnetIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PublicSubnet1Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet1.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 1 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PublicSubnet2Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet2.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 2 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PublicSubnet3Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet3.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 3 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet-ipv4-cidr-pl
+
+  PublicSubnetIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PublicSubnet1Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet1.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 1 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PublicSubnet2Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet2.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 2 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PublicSubnet3Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet3.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 3 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 1
+#---------------------------------------
+
+  PublicRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet1
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb1-${Subnet1AvailabilityZone}
+
+  InternetAccessPublicRoute1:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet1Ipv6Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute1IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet1Ipv4Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute1NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePublicSubnet1NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway1
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet1
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet1AvailabilityZone
+      MapPublicIpOnLaunch: !If [ PublicSubnet1Ipv6Only, false, true ]
+      AssignIpv6AddressOnCreation: !If [ PublicSubnet1Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PublicSubnet1Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet1CidrBlockIpAddressSuffix}/${PublicSubnet1CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PublicSubnet1Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 3, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PublicSubnet1Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePublicSubnet1NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet1Name
+              - !Sub ${ResourcePrefix}-public-subnet1-${Subnet1AvailabilityZone}
+              - !Ref PublicSubnet1Name
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable1
+
+  PublicSubnet1NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      NetworkAclId: !Ref PublicNetworkACL
+
+  PublicSubnet1IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PublicSubnet1Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet1.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 1 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet1-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet1-ipv4-cidr-pl
+
+  PublicSubnet1IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PublicSubnet1Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet1.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 1 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet1-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet1-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 2
+#---------------------------------------
+
+  PublicRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet2
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb2-${Subnet2AvailabilityZone}
+
+  InternetAccessPublicRoute2:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet2Ipv6Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute2IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet2Ipv4Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute2NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePublicSubnet2NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway2
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet2
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet2AvailabilityZone
+      MapPublicIpOnLaunch: !If [ PublicSubnet2Ipv6Only, false, true ]
+      AssignIpv6AddressOnCreation: !If [ PublicSubnet2Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PublicSubnet2Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet2CidrBlockIpAddressSuffix}/${PublicSubnet2CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PublicSubnet2Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 4, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PublicSubnet2Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePublicSubnet2NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet2Name
+              - !Sub ${ResourcePrefix}-public-subnet2-${Subnet2AvailabilityZone}
+              - !Ref PublicSubnet2Name
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable2
+
+  PublicSubnet2NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      NetworkAclId: !Ref PublicNetworkACL
+
+  PublicSubnet2IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PublicSubnet2Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet2.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 2 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet2-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet2-ipv4-cidr-pl
+
+  PublicSubnet2IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PublicSubnet2Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet2.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 2 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet2-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet2-ipv6-cidr-pl
+
+#---------------------------------------
+# Public Subnet 3
+#---------------------------------------
+
+  PublicRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-rtb3-${Subnet3AvailabilityZone}
+
+  InternetAccessPublicRoute3:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet3Ipv6Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute3IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPublicSubnet3Ipv4Only
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3
+      DestinationIpv6CidrBlock: ::/0
+      GatewayId: !Ref InternetGateway
+
+  InternetAccessPublicRoute3NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePublicSubnet3NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable3
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway3
+
+  PublicSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet3
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet3AvailabilityZone
+      MapPublicIpOnLaunch: !If [ PublicSubnet3Ipv6Only, false, true ]
+      AssignIpv6AddressOnCreation: !If [ PublicSubnet3Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PublicSubnet3Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PublicSubnet3CidrBlockIpAddressSuffix}/${PublicSubnet3CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PublicSubnet3Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 5, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PublicSubnet3Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePublicSubnet3NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPublicSubnet3Name
+              - !Sub ${ResourcePrefix}-public-subnet3-${Subnet3AvailabilityZone}
+              - !Ref PublicSubnet3Name
+
+  PublicSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      RouteTableId: !Ref PublicRouteTable3
+
+  PublicSubnet3NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PublicSubnet3
+      NetworkAclId: !Ref PublicNetworkACL
+
+  PublicSubnet3IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PublicSubnet3Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PublicSubnet3.CidrBlock
+                Description: !Sub ${ResourcePrefix} Public Subnet 3 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet3-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet3-ipv4-cidr-pl
+
+  PublicSubnet3IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PublicSubnet3Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PublicSubnet3.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Public Subnet 3 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-public-subnet3-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-public-subnet3-ipv6-cidr-pl
+
+##############################
+# Private Network
+##############################
+
+  PrivateNetworkACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-nacl
+
+  PrivateNetworkACLEntryEgress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      Egress: true
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PrivateNetworkACLEntryIngress:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      Egress: false
+      RuleNumber : 100
+      RuleAction : allow
+      Protocol: -1
+      CidrBlock: 0.0.0.0/0
+
+  PrivateNetworkACLEntryEgressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      Egress: true
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  PrivateNetworkACLEntryIngressIpv6:
+    Type: AWS::EC2::NetworkAclEntry
+    Condition: EnableIpv6CidrBlock
+    Properties:
+      NetworkAclId: !Ref PrivateNetworkACL
+      Egress: false
+      RuleNumber : 101
+      RuleAction : allow
+      Protocol: -1
+      Ipv6CidrBlock: ::/0
+
+  PrivateSubnetIPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PrivateSubnet1Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet1.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 1 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PrivateSubnet2Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet2.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 2 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PrivateSubnet3Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet3.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 3 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet-ipv4-cidr-pl
+
+  PrivateSubnetIPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PrivateSubnet1Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet1.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 1 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PrivateSubnet2Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet2.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 2 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PrivateSubnet3Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet3.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 3 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 3
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet-ipv6-cidr-pl
+
+#---------------------------------------
+# Private Subnet 1
+#---------------------------------------
+
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet1
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-rtb1-${Subnet1AvailabilityZone}
+
+  InternetAccessPrivateRoute1:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateNatGateway1
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+
+  InternetAccessPrivateRoute1IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPrivateSubnet1Ipv4Only
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationIpv6CidrBlock: ::/0
+      EgressOnlyInternetGatewayId: !Ref EgressOnlyInternetGateway
+
+  InternetAccessPrivateRoute1NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateSubnet1NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway1
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet1
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet1AvailabilityZone
+      MapPublicIpOnLaunch: false
+      AssignIpv6AddressOnCreation: !If [ PrivateSubnet1Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PrivateSubnet1Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PrivateSubnet1CidrBlockIpAddressSuffix}/${PrivateSubnet1CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PrivateSubnet1Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 6, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PrivateSubnet1Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePrivateSubnet1NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPrivateSubnet1Name
+              - !Sub ${ResourcePrefix}-private-subnet1-${Subnet1AvailabilityZone}
+              - !Ref PrivateSubnet1Name
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateSubnet1NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet1
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      NetworkAclId: !Ref PrivateNetworkACL
+
+  PrivateSubnet1IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PrivateSubnet1Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet1.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 1 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet1-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet1-ipv4-cidr-pl
+
+  PrivateSubnet1IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet1
+          - Fn::If:
+              - PrivateSubnet1Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet1.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 1 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet1-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet1-ipv6-cidr-pl
+
+#---------------------------------------
+# Private Subnet 2
+#---------------------------------------
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet2
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-rtb2-${Subnet2AvailabilityZone}
+
+  InternetAccessPrivateRoute2:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateNatGateway2
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+
+  InternetAccessPrivateRoute2IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPrivateSubnet2Ipv4Only
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationIpv6CidrBlock: ::/0
+      EgressOnlyInternetGatewayId: !Ref EgressOnlyInternetGateway
+
+  InternetAccessPrivateRoute2NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateSubnet2NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway2
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet2
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet2AvailabilityZone
+      MapPublicIpOnLaunch: false
+      AssignIpv6AddressOnCreation: !If [ PrivateSubnet2Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PrivateSubnet2Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PrivateSubnet2CidrBlockIpAddressSuffix}/${PrivateSubnet2CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PrivateSubnet2Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 7, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PrivateSubnet2Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePrivateSubnet2NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPrivateSubnet2Name
+              - !Sub ${ResourcePrefix}-private-subnet2-${Subnet2AvailabilityZone}
+              - !Ref PrivateSubnet2Name
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2
+
+  PrivateSubnet2NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet2
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      NetworkAclId: !Ref PrivateNetworkACL
+
+  PrivateSubnet2IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PrivateSubnet2Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet2.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 2 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet2-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet2-ipv4-cidr-pl
+
+  PrivateSubnet2IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet2
+          - Fn::If:
+              - PrivateSubnet2Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet2.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 2 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet2-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet2-ipv6-cidr-pl
+
+#---------------------------------------
+# Private Subnet 3
+#---------------------------------------
+
+  PrivateRouteTable3:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateSubnet3
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-rtb3-${Subnet3AvailabilityZone}
+
+  InternetAccessPrivateRoute3:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateNatGateway3
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway3
+
+  InternetAccessPrivateRoute3IPv6:
+    Type: AWS::EC2::Route
+    Condition: NotPrivateSubnet3Ipv4Only
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationIpv6CidrBlock: ::/0
+      EgressOnlyInternetGatewayId: !Ref EgressOnlyInternetGateway
+
+  InternetAccessPrivateRoute3NAT64:
+    Type: AWS::EC2::Route
+    Condition: EnablePrivateSubnet3NAT64
+    DependsOn: VPCInternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable3
+      DestinationIpv6CidrBlock: 64:ff9b::/96
+      NatGatewayId: !Ref NatGateway3
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Condition: CreateSubnet3
+    DependsOn: EnableIpv6CidrBlockWaitCondition
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref Subnet3AvailabilityZone
+      MapPublicIpOnLaunch: false
+      AssignIpv6AddressOnCreation: !If [ PrivateSubnet3Ipv4Only, false, true ]
+      CidrBlock:
+        Fn::If:
+          - PrivateSubnet3Ipv6Only
+          - !Ref AWS::NoValue
+          - !Sub ${VpcCidrBlockIpAddressPrefix}.${PrivateSubnet3CidrBlockIpAddressSuffix}/${PrivateSubnet3CidrBlockCidr}
+      Ipv6CidrBlock:
+        Fn::If:
+          - PrivateSubnet3Ipv4Only
+          - !Ref AWS::NoValue
+          - !Select [ 8, !Cidr [ !Select [ 0, !GetAtt VPC.Ipv6CidrBlocks ], 9, 64 ] ]
+      Ipv6Native: !If [ PrivateSubnet3Ipv6Only, true, false ]
+      EnableDns64: !If [ EnablePrivateSubnet3NAT64, true, false ]
+      Tags:
+        - Key: Name
+          Value:
+            Fn::If:
+              - NotSpecifiedPrivateSubnet3Name
+              - !Sub ${ResourcePrefix}-private-subnet3-${Subnet3AvailabilityZone}
+              - !Ref PrivateSubnet3Name
+
+  PrivateSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      RouteTableId: !Ref PrivateRouteTable3
+
+  PrivateSubnet3NACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Condition: CreateSubnet3
+    Properties:
+      SubnetId: !Ref PrivateSubnet3
+      NetworkAclId: !Ref PrivateNetworkACL
+
+  PrivateSubnet3IPv4CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv4
+      Entries:
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PrivateSubnet3Ipv6Only
+              - !Ref AWS::NoValue
+              - Cidr: !GetAtt PrivateSubnet3.CidrBlock
+                Description: !Sub ${ResourcePrefix} Private Subnet 3 IPv4 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet3-ipv4-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet3-ipv4-cidr-pl
+
+  PrivateSubnet3IPv6CidrPrefixList:
+    Type: AWS::EC2::PrefixList
+    Condition: CreatePrefixList
+    Properties:
+      AddressFamily: IPv6
+      Entries:
+        - Fn::If:
+          - CreateSubnet3
+          - Fn::If:
+              - PrivateSubnet3Ipv4Only
+              - !Ref AWS::NoValue
+              - Cidr: !Select [ 0, !GetAtt PrivateSubnet3.Ipv6CidrBlocks ]
+                Description: !Sub ${ResourcePrefix} Private Subnet 3 IPv6 CIDR block.
+          - !Ref AWS::NoValue
+      MaxEntries: 1
+      PrefixListName: !Sub ${ResourcePrefix}-private-subnet3-ipv6-cidr-pl
+      Tags:
+        - Key: Name
+          Value: !Sub ${ResourcePrefix}-private-subnet3-ipv6-cidr-pl
+
+##############################
+# Gateway Type VPC Endpoint
+##############################
+
+  GatewayTypeVpcEndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateS3VpcEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      VpcId: !Ref VPC
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PublicRouteTable1ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PublicRouteTable1.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PrivateRouteTable1.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PublicRouteTable2ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PublicRouteTable2.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PrivateRouteTable2.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PublicRouteTable3ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PublicRouteTable3.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PrivateRouteTable3.RouteTableId
+          - !Ref AWS::NoValue
+
+  GatewayTypeVpcEndpointDynamoDB:
+    Type: AWS::EC2::VPCEndpoint
+    Condition: CreateDynamoDBVpcEndpoint
+    Properties:
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      VpcId: !Ref VPC
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PublicRouteTable1ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PublicRouteTable1.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet1
+          - !GetAtt PrivateRouteTable1.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PublicRouteTable2ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PublicRouteTable2.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet2
+          - !GetAtt PrivateRouteTable2.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PublicRouteTable3ForNATGW.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PublicRouteTable3.RouteTableId
+          - !Ref AWS::NoValue
+        - Fn::If:
+          - CreateSubnet3
+          - !GetAtt PrivateRouteTable3.RouteTableId
+          - !Ref AWS::NoValue
+
+Outputs:
+
+##############################
+# VPC
+##############################
+
+  VpcId:
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcId
+
+  VpcCidrBlock:
+    Value: !GetAtt VPC.CidrBlock
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcCidrBlock
+
+  EnableIpv6:
+    Value: !If [ EnableIpv6CidrBlock, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-EnableIpv6
+
+  VpcIpv6CidrBlocks:
+# Exported values must not be empty or whitespace-only, so empty values  represent '-'.
+    Value:
+      Fn::If:
+        - EnableIpv6CidrBlock
+        - !Join [ ',', !GetAtt VPC.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcIpv6CidrBlocks
+
+  VpcIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref VPCIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcIPv4CidrPrefixListId
+
+  VpcIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref VPCIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-VpcIPv6CidrPrefixListId
+
+##############################
+# Subnet
+##############################
+
+  CreateSubnet:
+    Value: !If [ CreateSubnet, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-CreateSubnet
+
+  CreateSubnet1:
+    Value: !If [ CreateSubnet1, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-CreateSubnet1
+
+  CreateSubnet2:
+    Value: !If [ CreateSubnet2, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-CreateSubnet2
+
+  CreateSubnet3:
+    Value: !If [ CreateSubnet3, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-CreateSubnet3
+
+  CreatedSubnetKeys:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - PublicSubnet1ForNATGW,PublicSubnet1,PrivateSubnet1
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - PublicSubnet2ForNATGW,PublicSubnet2,PrivateSubnet2
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - PublicSubnet3ForNATGW,PublicSubnet3,PrivateSubnet3
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedSubnetKeys
+
+  Subnet1AvailabilityZone:
+    Value: !If [ CreateSubnet1, !Ref Subnet1AvailabilityZone, '-' ]
+    Export:
+      Name: !Sub ${AWS::StackName}-Subnet1AvailabilityZone
+
+  Subnet2AvailabilityZone:
+    Value: !If [ CreateSubnet2, !Ref Subnet2AvailabilityZone, '-' ]
+    Export:
+      Name: !Sub ${AWS::StackName}-Subnet2AvailabilityZone
+
+  Subnet3AvailabilityZone:
+    Value: !If [ CreateSubnet3, !Ref Subnet3AvailabilityZone, '-' ]
+    Export:
+      Name: !Sub ${AWS::StackName}-Subnet3AvailabilityZone
+
+  EnableNatGateway:
+    Value: !If [ EnableNatGateway, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-EnableNatGateway
+
+##############################
+# Public NAT Gateway Network
+##############################
+
+  NatGatewayEipPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref NatGatewayEipPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGatewayEipPrefixListId
+
+  PublicSubnetForNATGWIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnetForNATGWIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetForNATGWIPv4CidrPrefixListId
+
+  PublicSubnetForNATGWIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnetForNATGWIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetForNATGWIPv6CidrPrefixListId
+
+  CreatedPublicSubnetForNATGWIds:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - !Ref PublicSubnet1ForNATGW
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - !Ref PublicSubnet2ForNATGW
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - !Ref PublicSubnet3ForNATGW
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPublicSubnetForNATGWIds
+
+  CreatedPublicSubnetForNATGWKeys:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - PublicSubnet1ForNATGW
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - PublicSubnet2ForNATGW
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - PublicSubnet3ForNATGW
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPublicSubnetForNATGWKeys
+
+#---------------------------------------
+# Public Subnet 1 For NAT Gateway
+#---------------------------------------
+
+  NatGateway1PublicIp:
+    Value:
+      Fn::If:
+        - EnableNatGateway1
+        - !GetAtt NatGatewayEip1.PublicIp
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGateway1PublicIp
+
+  PublicRouteTable1ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PublicRouteTable1ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable1ForNATGWId
+
+  PublicSubnet1ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PublicSubnet1ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWId
+
+  PublicSubnet1ForNATGWCidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !GetAtt PublicSubnet1ForNATGW.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWCidrBlock
+
+  PublicSubnet1ForNATGWIpv6CidrBlocks:
+    Value:
+      Fn::If:
+        - EnableIpv6CidrBlock1
+        - !Join [ ',', !GetAtt PublicSubnet1ForNATGW.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWIpv6CidrBlocks
+
+  PublicSubnet1ForNATGWProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - EnableIpv6CidrBlock1
+            - DualStack
+            - IPv4Only
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWProtocolStack
+
+  PublicSubnet1ForNATGWMapPublicIpOnLaunch:
+    Value: !If [ CreateSubnet1, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWMapPublicIpOnLaunch
+
+  NatGatewayEip1PrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref NatGatewayEip1PrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGatewayEip1PrefixListId
+
+  PublicSubnet1ForNATGWIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet1ForNATGWIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWIPv4CidrPrefixListId
+
+  PublicSubnet1ForNATGWIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet1ForNATGWIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ForNATGWIPv6CidrPrefixListId
+
+#---------------------------------------
+# Public Subnet 2 For NAT Gateway
+#---------------------------------------
+
+  NatGateway2PublicIp:
+    Value:
+      Fn::If:
+        - EnableNatGateway2
+        - !GetAtt NatGatewayEip2.PublicIp
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGateway2PublicIp
+
+  PublicRouteTable2ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PublicRouteTable2ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable2ForNATGWId
+
+  PublicSubnet2ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PublicSubnet2ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWId
+
+  PublicSubnet2ForNATGWCidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !GetAtt PublicSubnet2ForNATGW.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWCidrBlock
+
+  PublicSubnet2ForNATGWIpv6CidrBlocks:
+    Value:
+      Fn::If:
+        - EnableIpv6CidrBlock2
+        - !Join [ ',', !GetAtt PublicSubnet2ForNATGW.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWIpv6CidrBlocks
+
+  PublicSubnet2ForNATGWProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - EnableIpv6CidrBlock2
+            - DualStack
+            - IPv4Only
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWProtocolStack
+
+  PublicSubnet2ForNATGWMapPublicIpOnLaunch:
+    Value: !If [ CreateSubnet2, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWMapPublicIpOnLaunch
+
+  NatGatewayEip2PrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref NatGatewayEip2PrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGatewayEip2PrefixListId
+
+  PublicSubnet2ForNATGWIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet2ForNATGWIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWIPv4CidrPrefixListId
+
+  PublicSubnet2ForNATGWIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet2ForNATGWIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ForNATGWIPv6CidrPrefixListId
+
+#---------------------------------------
+# Public Subnet 3 For NAT Gateway
+#---------------------------------------
+
+  NatGateway3PublicIp:
+    Value:
+      Fn::If:
+        - EnableNatGateway3
+        - !GetAtt NatGatewayEip3.PublicIp
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGateway3PublicIp
+
+  PublicRouteTable3ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PublicRouteTable3ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable3ForNATGWId
+
+  PublicSubnet3ForNATGWId:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PublicSubnet3ForNATGW
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWId
+
+  PublicSubnet3ForNATGWCidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !GetAtt PublicSubnet3ForNATGW.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWCidrBlock
+
+  PublicSubnet3ForNATGWIpv6CidrBlocks:
+    Value:
+      Fn::If:
+        - EnableIpv6CidrBlock3
+        - !Join [ ',', !GetAtt PublicSubnet3ForNATGW.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWIpv6CidrBlocks
+
+  PublicSubnet3ForNATGWProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - EnableIpv6CidrBlock3
+            - DualStack
+            - IPv4Only
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWProtocolStack
+
+  PublicSubnet3ForNATGWMapPublicIpOnLaunch:
+    Value: !If [ CreateSubnet3, true, false ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWMapPublicIpOnLaunch
+
+  NatGatewayEip3PrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref NatGatewayEip3PrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-NatGatewayEip3PrefixListId
+
+  PublicSubnet3ForNATGWIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet3ForNATGWIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWIPv4CidrPrefixListId
+
+  PublicSubnet3ForNATGWIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet3ForNATGWIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ForNATGWIPv6CidrPrefixListId
+
+##############################
+# Public Network
+##############################
+
+  PublicSubnetIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnetIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetIPv4CidrPrefixListId
+
+  PublicSubnetIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnetIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnetIPv6CidrPrefixListId
+
+  CreatedPublicSubnetIds:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - !Ref PublicSubnet1
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - !Ref PublicSubnet2
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - !Ref PublicSubnet3
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPublicSubnetIds
+
+  CreatedPublicSubnetKeys:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - PublicSubnet1
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - PublicSubnet2
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - PublicSubnet3
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPublicSubnetKeys
+
+#---------------------------------------
+# Public Subnet 1
+#---------------------------------------
+
+  PublicRouteTable1Id:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PublicRouteTable1
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable1Id
+
+  PublicSubnet1Id:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PublicSubnet1
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1Id
+
+  PublicSubnet1CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PublicSubnet1Ipv6Only
+            - '-'
+            - !GetAtt PublicSubnet1.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1CidrBlock
+
+  PublicSubnet1Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PublicSubnet1Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PublicSubnet1.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1Ipv6CidrBlocks
+
+  PublicSubnet1ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PublicSubnet1Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PublicSubnet1Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1ProtocolStack
+
+  PublicSubnet1MapPublicIpOnLaunch:
+    Value: !If [ PublicSubnet1Ipv6Only, false, true ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1MapPublicIpOnLaunch
+
+  PublicSubnet1IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet1IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1IPv4CidrPrefixListId
+
+  PublicSubnet1IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet1IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet1IPv6CidrPrefixListId
+
+#---------------------------------------
+# Public Subnet 2
+#---------------------------------------
+
+  PublicRouteTable2Id:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PublicRouteTable2
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable2Id
+
+  PublicSubnet2Id:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PublicSubnet2
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2Id
+
+  PublicSubnet2CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PublicSubnet2Ipv6Only
+            - '-'
+            - !GetAtt PublicSubnet2.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2CidrBlock
+
+  PublicSubnet2Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PublicSubnet2Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PublicSubnet2.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2Ipv6CidrBlocks
+
+  PublicSubnet2ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PublicSubnet2Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PublicSubnet2Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2ProtocolStack
+
+  PublicSubnet2MapPublicIpOnLaunch:
+    Value: !If [ PublicSubnet2Ipv6Only, false, true ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2MapPublicIpOnLaunch
+
+  PublicSubnet2IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet2IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2IPv4CidrPrefixListId
+
+  PublicSubnet2IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet2IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet2IPv6CidrPrefixListId
+
+#---------------------------------------
+# Public Subnet 3
+#---------------------------------------
+
+  PublicRouteTable3Id:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PublicRouteTable3
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicRouteTable3Id
+
+  PublicSubnet3Id:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PublicSubnet3
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3Id
+
+  PublicSubnet3CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PublicSubnet3Ipv6Only
+            - '-'
+            - !GetAtt PublicSubnet3.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3CidrBlock
+
+  PublicSubnet3Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PublicSubnet3Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PublicSubnet3.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3Ipv6CidrBlocks
+
+  PublicSubnet3ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PublicSubnet3Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PublicSubnet3Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3ProtocolStack
+
+  PublicSubnet3MapPublicIpOnLaunch:
+    Value: !If [ PublicSubnet3Ipv6Only, false, true ]
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3MapPublicIpOnLaunch
+
+  PublicSubnet3IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet3IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3IPv4CidrPrefixListId
+
+  PublicSubnet3IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PublicSubnet3IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicSubnet3IPv6CidrPrefixListId
+
+##############################
+# Private Network
+##############################
+
+  PrivateSubnetIPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnetIPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnetIPv4CidrPrefixListId
+
+  PrivateSubnetIPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnetIPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnetIPv6CidrPrefixListId
+
+  CreatedPrivateSubnetIds:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - !Ref PrivateSubnet1
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - !Ref PrivateSubnet2
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - !Ref PrivateSubnet3
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPrivateSubnetIds
+
+  CreatedPrivateSubnetKeys:
+    Value:
+      Fn::If:
+        - CreateSubnet
+        - Fn::Join:
+            - ','
+            - - Fn::If:
+                  - CreateSubnet1
+                  - PrivateSubnet1
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet2
+                  - PrivateSubnet2
+                  - !Ref AWS::NoValue
+              - Fn::If:
+                  - CreateSubnet3
+                  - PrivateSubnet3
+                  - !Ref AWS::NoValue
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-CreatedPrivateSubnetKeys
+
+#---------------------------------------
+# Private Subnet 1
+#---------------------------------------
+
+  PrivateRouteTable1Id:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PrivateRouteTable1
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTable1Id
+
+  PrivateSubnet1Id:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - !Ref PrivateSubnet1
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1Id
+
+  PrivateSubnet1CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PrivateSubnet1Ipv6Only
+            - '-'
+            - !GetAtt PrivateSubnet1.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1CidrBlock
+
+  PrivateSubnet1Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PrivateSubnet1Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PrivateSubnet1.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1Ipv6CidrBlocks
+
+  PrivateSubnet1ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet1
+        - Fn::If:
+            - PrivateSubnet1Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PrivateSubnet1Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1ProtocolStack
+
+  PrivateSubnet1MapPublicIpOnLaunch:
+    Value: false
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1MapPublicIpOnLaunch
+
+  PrivateSubnet1IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet1IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1IPv4CidrPrefixListId
+
+  PrivateSubnet1IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet1IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1IPv6CidrPrefixListId
+
+#---------------------------------------
+# Private Subnet 2
+#---------------------------------------
+
+  PrivateRouteTable2Id:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PrivateRouteTable2
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTable2Id
+
+  PrivateSubnet2Id:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - !Ref PrivateSubnet2
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2Id
+
+  PrivateSubnet2CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PrivateSubnet2Ipv6Only
+            - '-'
+            - !GetAtt PrivateSubnet2.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2CidrBlock
+
+  PrivateSubnet2Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PrivateSubnet2Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PrivateSubnet2.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2Ipv6CidrBlocks
+
+  PrivateSubnet2ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet2
+        - Fn::If:
+            - PrivateSubnet2Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PrivateSubnet2Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2ProtocolStack
+
+  PrivateSubnet2MapPublicIpOnLaunch:
+    Value: false
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2MapPublicIpOnLaunch
+
+  PrivateSubnet2IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet2IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2IPv4CidrPrefixListId
+
+  PrivateSubnet2IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet2IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2IPv6CidrPrefixListId
+
+#---------------------------------------
+# Private Subnet 3
+#---------------------------------------
+
+  PrivateRouteTable3Id:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PrivateRouteTable3
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateRouteTable3Id
+
+  PrivateSubnet3Id:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - !Ref PrivateSubnet3
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3Id
+
+  PrivateSubnet3CidrBlock:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PrivateSubnet3Ipv6Only
+            - '-'
+            - !GetAtt PrivateSubnet3.CidrBlock
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3CidrBlock
+
+  PrivateSubnet3Ipv6CidrBlocks:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PrivateSubnet3Ipv4Only
+            - '-'
+            - !Join [ ',', !GetAtt PrivateSubnet3.Ipv6CidrBlocks ]
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3Ipv6CidrBlocks
+
+  PrivateSubnet3ProtocolStack:
+    Value:
+      Fn::If:
+        - CreateSubnet3
+        - Fn::If:
+            - PrivateSubnet3Ipv6Only
+            - IPv6Only
+            - Fn::If:
+                - PrivateSubnet3Ipv4Only
+                - IPv4Only
+                - DualStack
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3ProtocolStack
+
+  PrivateSubnet3MapPublicIpOnLaunch:
+    Value: false
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3MapPublicIpOnLaunch
+
+  PrivateSubnet3IPv4CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet3IPv4CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3IPv4CidrPrefixListId
+
+  PrivateSubnet3IPv6CidrPrefixListId:
+    Value:
+      Fn::If:
+        - CreatePrefixList
+        - !Ref PrivateSubnet3IPv6CidrPrefixList
+        - '-'
+    Export:
+      Name: !Sub ${AWS::StackName}-PrivateSubnet3IPv6CidrPrefixListId
+
