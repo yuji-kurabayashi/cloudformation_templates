@@ -1,0 +1,269 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Create CodeBuild project and ECR repository.
+  Build application docker image process is supposed to use S3 source code and Dokerfile.
+  CodeBuild uses 'buildspec.yml' process is supposed to build application docker image and push built docker imege to ECR.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: CodeBuild Project Resource Settings
+        Parameters:
+          - CodeBuildProjectName
+          - CodeBuildProjectDesc
+          - CodeBuildEnvironmentType
+          - CodeBuildEnvironmentComputeType
+          - CodeBuildEnvironmentImage
+          - CodeBuildSourceLocation
+      - Label:
+          default: ECR Repository Resource Settings
+        Parameters:
+          - EcrRepositoryName
+
+    ParameterLabels:
+
+      CodeBuildProjectName:
+        default: CodeBuildProjectName
+      CodeBuildProjectDesc:
+        default: BuildProjectDescription
+      CodeBuildEnvironmentType:
+        default: BuildEnvironmentOSContainer
+      CodeBuildEnvironmentComputeType:
+        default: BuildEnvironmentComputeSpec
+      CodeBuildEnvironmentImage:
+        default: BuildEnvironmentImage
+      CodeBuildSourceLocation:
+        default: SourceLocation
+
+      EcrRepositoryName:
+        default: RepositoryName
+
+Parameters:
+
+  CodeBuildProjectName:
+    Type: String
+    Description: <Required> CodeBuild project name.
+    MinLength: 1
+  CodeBuildProjectDesc:
+    Type: String
+    Description: <Optional> CodeBuild project description.
+  CodeBuildEnvironmentType:
+    Type: String
+    Description: CodeBuild compute environment operating system container type. see https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-compute-types.html
+    Default: ARM_CONTAINER
+    AllowedValues:
+      - WINDOWS_CONTAINER
+      - LINUX_CONTAINER
+      - LINUX_GPU_CONTAINER
+      - ARM_CONTAINER
+      - WINDOWS_SERVER_2019_CONTAINER
+      - LINUX_LAMBDA_CONTAINER
+      - ARM_LAMBDA_CONTAINER
+      - MAC_ARM
+  CodeBuildEnvironmentComputeType:
+    Type: String
+    Description: CodeBuild compute environment spec level. see https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/build-env-ref-compute-types.html
+    Default: BUILD_GENERAL1_SMALL
+    AllowedValues:
+      - BUILD_GENERAL1_SMALL
+      - BUILD_GENERAL1_MEDIUM
+      - BUILD_GENERAL1_LARGE
+      - BUILD_GENERAL1_XLARGE
+      - BUILD_GENERAL1_2XLARGE
+      - BUILD_LAMBDA_1GB
+      - BUILD_LAMBDA_2GB
+      - BUILD_LAMBDA_4GB
+      - BUILD_LAMBDA_8GB
+      - BUILD_LAMBDA_10GB
+  CodeBuildEnvironmentImage:
+    Type: String
+    Description: <Required> CodeBuild compute environment image. Choice from them, and input image ID. see https://docs.aws.amazon.com/ja_jp/codebuild/latest/userguide/ec2-compute-images.html
+    Default: aws/codebuild/amazonlinux2-aarch64-standard:3.0
+    MinLength: 1
+  CodeBuildSourceLocation:
+    Type: String
+    Description: <Required> Information about the S3 location of the source code to be built. The path to the ZIP file that contains the source code (for example, <bucket-name>/<path>/<object-name>.zip). The path to the folder that contains the source code (for example, <bucket-name>/<path-to-source-code>/<folder>/). see https://docs.aws.amazon.com/ja_jp/AWSCloudFormation/latest/UserGuide/aws-properties-codebuild-project-source.html#cfn-codebuild-project-source-location
+    MinLength: 1
+
+  EcrRepositoryName:
+    Type: String
+    Description: <Optional> Create ECR repository name for push application docker image built by CodeBuild. The repository name may be specified on its own (such as nginx-web-app) or it can be prepended with a namespace to group the repository into a category (such as project-a/nginx-web-app). If you don't specify a name, AWS CloudFormation generates a unique physical ID and uses that ID for the repository name.
+
+Conditions:
+
+  NotSpecifiedEcrRepositoryName: !Equals [ !Ref EcrRepositoryName, "" ]
+
+Resources:
+
+  CodeBuildDefaultManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${CodeBuildProjectName}-codebuild-default-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Sid: SecretReadAccessAllowActions
+            Effect: Allow
+            Action:
+              - ssm:GetParameters
+              - secretsmanager:GetSecretValue
+            Resource: "*"
+          -
+            Sid: SendCloudWatchLogsAllowActions
+            Effect: Allow
+            Action:
+              - logs:PutLogEvents
+            Resource: !GetAtt CodeBuildLogGroup.Arn
+          -
+            Sid: EcrGetAuthorizationTokenAllowActions
+            Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: "*"
+          -
+            Sid: EcrPushImageAllowActions
+            Effect: Allow
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:PutImage
+            Resource: !GetAtt EcrRepository.Arn
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${CodeBuildProjectName}-codebuild-service-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess
+        - !Ref CodeBuildDefaultManagedPolicy
+      Tags:
+        - Key: Name
+          Value: !Sub ${CodeBuildProjectName}-codebuild-service-role
+
+  CodeBuildServiceRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub ${CodeBuildProjectName}-codebuild-service-role-policy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: '*'
+            Resource: !GetAtt CodeBuildProject.Arn
+      Roles:
+        - !Ref CodeBuildServiceRole
+
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref CodeBuildProjectName
+      Description: !Ref CodeBuildProjectDesc
+      ServiceRole: !Ref CodeBuildServiceRole
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Source:
+        Type: S3
+        Location: !Ref CodeBuildSourceLocation
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - |
+                  export AWS_ECR_REGISTRY_URL=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.$AWS_URL_SUFFIX
+                  export DOCKER_IMAGE_REPO_NAME_AND_TAG=$IMAGE_REPO_NAME:$IMAGE_TAG
+                  echo "AWS_ECR_REGISTRY_URL="$AWS_ECR_REGISTRY_URL
+                  echo "DOCKER_IMAGE_REPO_NAME_AND_TAG="$DOCKER_IMAGE_REPO_NAME_AND_TAG
+                - echo "----- login to Amazon ECR Repository -----"
+                - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ECR_REGISTRY_URL
+                - |
+                  if [ -n "$DOCKER_USER" ] && [ -n "$DOCKER_TOKEN" ]; then
+                    echo "----- login to docker hub -----"
+                    echo $DOCKER_TOKEN | docker login -u $DOCKER_USER --password-stdin
+                  fi
+            build:
+              commands:
+                - echo "----- build docker image -----"
+                - echo Build started on `date`
+                - docker build -t $DOCKER_IMAGE_REPO_NAME_AND_TAG $DOCKER_BUILD_OPTIONS .
+                - echo Build completed on `date`
+            post_build:
+              commands:
+                - echo "----- add docker image tag -----"
+                - docker tag $DOCKER_IMAGE_REPO_NAME_AND_TAG $AWS_ECR_REGISTRY_URL/$DOCKER_IMAGE_REPO_NAME_AND_TAG
+                - echo "----- push docker image to Amazon ECR Repository -----"
+                - docker push $AWS_ECR_REGISTRY_URL/$DOCKER_IMAGE_REPO_NAME_AND_TAG
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: !Ref CodeBuildLogGroup
+          Status: ENABLED
+      Environment:
+        Type: !Ref CodeBuildEnvironmentType
+        ComputeType: !Ref CodeBuildEnvironmentComputeType
+        Image: !Ref CodeBuildEnvironmentImage
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Type: PLAINTEXT
+            Value: !Ref AWS::AccountId
+          - Name: AWS_DEFAULT_REGION
+            Type: PLAINTEXT
+            Value: !Ref AWS::Region
+          - Name: AWS_URL_SUFFIX
+            Type: PLAINTEXT
+            Value: !Ref AWS::URLSuffix
+          - Name: IMAGE_REPO_NAME
+            Type: PLAINTEXT
+            Value: !Ref EcrRepository
+          - Name: IMAGE_TAG
+            Type: PLAINTEXT
+            Value: latest
+          - Name: DOCKER_BUILD_OPTIONS
+            Type: PLAINTEXT
+            Value: ""
+          - Name: DOCKER_USER
+            Type: PLAINTEXT
+            Value: ""
+          - Name: DOCKER_TOKEN
+            Type: PLAINTEXT
+            Value: ""
+      Tags:
+        - Key: Name
+          Value: !Ref CodeBuildProjectName
+
+  CodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/codebuild/${CodeBuildProjectName}
+      Tags:
+        - Key: Name
+          Value: !Sub /aws/codebuild/${CodeBuildProjectName}
+
+  EcrRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName:
+        Fn::If:
+          - NotSpecifiedEcrRepositoryName
+          - !Ref AWS::NoValue
+          - !Ref EcrRepositoryName
+      ImageTagMutability: MUTABLE
+      Tags:
+        - Key: CodeBuildProjectName
+          Value: !Ref CodeBuildProjectName
+        - Fn::If:
+            - NotSpecifiedEcrRepositoryName
+            - !Ref AWS::NoValue
+            - Key: Name
+              Value: !Ref EcrRepositoryName
